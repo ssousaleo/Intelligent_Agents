@@ -10,12 +10,12 @@ pygame.init()
 ###############################
 # Program Parameters
 frames_per_second = 240
-total_obstacles = 20
+total_obstacles = 1
 mutation_rate = 0.01
-population = 100
+population = 200
 lifespan = 100
 resistance = 1
-speed = 5
+speed = 20
 ###############################
 
 # Simulation values
@@ -132,7 +132,7 @@ class Bug(pygame.sprite.Sprite, DNA):
         self.wall_collision = False
         self.target_collision = False
         self.active_sprite = True
-        self.birth_time = time.clock()
+        self.birth_time = time.process_time()
         self.death_time = 0
         self.lifetime = 0
 
@@ -140,7 +140,7 @@ class Bug(pygame.sprite.Sprite, DNA):
         self.velocity = Vector(0, 0)
         self.acceleration = Vector(0, 0)
 
-        self.angle = round(-self.velocity.get_angle_degrees())
+        self.angle = round(-self.velocity.angle_degrees)
         self.rotate_bug(self.angle)
 
     def apply_force(self, force):
@@ -169,7 +169,7 @@ class Bug(pygame.sprite.Sprite, DNA):
                 self.position = Vector(0, 0)
                 self.position = Vector(center_x, display_height - 20)
 
-            self.angle = round(-self.velocity.get_angle_degrees() - 90)
+            self.angle = round(-self.velocity.angle_degrees - 90)
             self.rotate_bug(self.angle)
 
     # Rotate the bug image X degrees
@@ -364,7 +364,7 @@ def main():
 
             if bug[i].active_sprite is True:
                 if pygame.sprite.collide_circle(bug[i], target):
-                    bug[i].death_time = time.clock()
+                    bug[i].death_time = time.process_time()
                     dead_bugs += 1
                     sprite_list.remove(bug[i])
                     bug[i].active_sprite = False
