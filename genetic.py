@@ -20,8 +20,8 @@ RANDOM_SEED = 42  # Seed for reproducible results (None = random every time)
 POPULATION = 200  # Total number of bugs (agents) per generation
 LIFESPAN = 100  # Duration of a generation (number of moves/frames)
 MUTATION_RATE = 0.01  # 1% chance a gene (movement vector) is randomized
-SUCCESS_THRESHOLD = 0.95  # Stop simulation if 95% of bugs hit the target
-PLATEAU_LIMIT = 20  # Stop if max fitness score doesn't improve for 20 gens
+SUCCESS_THRESHOLD = 0.97  # Stop simulation if designated % of bugs hit the target
+PLATEAU_LIMIT = 40  # Stop if max fitness score doesn't improve for the designated gens
 
 # -- Physics / Entities --
 TOTAL_OBSTACLES = 10  # Number of random black walls to generate
@@ -285,6 +285,8 @@ def select_parents(mating_pool):
 
 def main():
     global MUTATION_RATE  # Use the global config variable
+    # Record the initial starting mutation rate
+    starting_mutation_rate = MUTATION_RATE
 
     plateau_counter = 0
     last_generation_max_fitness = 0
@@ -303,6 +305,7 @@ def main():
     progress_counter = 0
 
     best_path_to_draw = []
+    global_best_fitness = 0
 
     obstacle = []
     bug = []
@@ -356,7 +359,7 @@ def main():
             if len(best_path_to_draw) > 1:
                 pygame.draw.lines(game_display, RED, False, best_path_to_draw, 3)
 
-            # --- DRAW UI BACKGROUND FOR RESULTS ---
+            # Draw UI background for results
             # Box centered on screen
             bg_w, bg_h = 400, 300
             bg_x = center_x - (bg_w // 2)
@@ -386,8 +389,7 @@ def main():
         if len(best_path_to_draw) > 1:
             pygame.draw.lines(game_display, RED, False, best_path_to_draw, 2)
 
-        # --- DRAW UI BACKGROUND FOR STATS ---
-        # Box at top left
+        # Draw UI background for stats
         u.draw_transparent_rect(10, 10, 250, 180, UI_BG_COLOR, 180)
 
         # Standard Status Text
@@ -435,15 +437,22 @@ def main():
 
         # End of Generation Check
         if dead_bugs >= POPULATION or lifespan_counter <= 0:
-            current_best_bug = None
-            current_max = -1
-            for b in bug:
-                if b.fitness_score > current_max:
-                    current_max = b.fitness_score
-                    current_best_bug = b
 
-            if current_best_bug is not None:
-                best_path_to_draw = current_best_bug.visited_points[:]
+            # Find the single best bug of this generation
+            current_gen_best_bug = None
+            current_gen_max = -1
+
+            for b in bug:
+                if b.fitness_score > current_gen_max:
+                    current_gen_max = b.fitness_score
+                    current_gen_best_bug = b
+
+            # Compare against the all-time global best
+            # Only update the red line if this generation produced a better result
+            if current_gen_best_bug is not None:
+                if current_gen_max > global_best_fitness:
+                    global_best_fitness = current_gen_max
+                    best_path_to_draw = current_gen_best_bug.visited_points[:]
 
             # Convergence Check
             if (success_count / POPULATION) >= SUCCESS_THRESHOLD:
@@ -474,7 +483,7 @@ def main():
                         progress_counter = 0
             elif progress_flag is True:
                 progress_flag = False
-                MUTATION_RATE = 0.01
+                MUTATION_RATE = starting_mutation_rate
                 progress_counter = 0
                 print("Successful generation!")
 
