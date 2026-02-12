@@ -283,6 +283,15 @@ def main():
 
     global mutation_rate
 
+    # Convergence Settings
+    success_threshold = 0.95  # Stop if 95% of bugs hit target
+    plateau_limit = 20  # Stop if fitness doesn't improve for 20 gens
+    plateau_counter = 0
+    last_generation_max_fitness = 0
+    simulation_running = True  # Controls if we update physics
+    end_reason = ""  # Text to display on screen
+    success_count = 0  # Track successes per generation
+
     loop = True
     dead_bugs = 0
     update_counter = 0
@@ -336,9 +345,50 @@ def main():
     while loop is True:
         game_display.fill(white)
         u.event_update()
+
+        # Visual result screen
+        if not simulation_running:
+            # 1. Draw the static simulation (frozen in time)
+            u.sprite_update(sprite_target)
+            u.sprite_update(sprite_list)
+            u.sprite_update(obstacle_list)
+
+            # 2. Setup Fonts
+            font_title = pygame.font.SysFont("arial", 60, bold=True)
+            font_sub = pygame.font.SysFont("arial", 30)
+
+            # 3. Create Text Surfaces
+            title_surf = font_title.render("CONVERGED!", True, blue)
+            reason_surf = font_sub.render(f"Reason: {end_reason}", True, red)
+            stats_surf = font_sub.render(f"Gen: {generation_counter} | Max Fitness: {round(max_fitness, 2)}", True,
+                                         black)
+
+            # 4. Center the Text on Screen
+            t_rect = title_surf.get_rect(center=(center_x, center_y - 60))
+            r_rect = reason_surf.get_rect(center=(center_x, center_y))
+            s_rect = stats_surf.get_rect(center=(center_x, center_y + 40))
+
+            # 5. Draw Text
+            game_display.blit(title_surf, t_rect)
+            game_display.blit(reason_surf, r_rect)
+            game_display.blit(stats_surf, s_rect)
+
+            # 6. Draw Quit Button & Update Display
+            u.draw_button("Quit", display_width - 100, display_height - 100, 90, 90,
+                          (255, 0, 0), (230, 0, 0), quit)
+            u.display_update()
+
+            # 7. Skip the rest of the loop (physics)
+            continue
+            # -----------------------------------
+
+        # Standard Status Text
         update_status_text("Generation " + str(generation_counter), 30)
         update_status_text("Mutation Rate: " + str(int(mutation_rate * 100)) + " Percent", 60)
         update_status_text("Fitness Score: " + str(max_fitness), 90)
+        update_status_text(f"Plateau: {plateau_counter}/{plateau_limit}", 120)
+        update_status_text(f"Successes: {success_count}/{population}", 150)
+
         u.sprite_update(sprite_target)
         u.sprite_update(sprite_list)
         u.sprite_update(obstacle_list)
@@ -366,6 +416,7 @@ def main():
                 if pygame.sprite.collide_circle(bug[i], target):
                     bug[i].death_time = time.process_time()
                     dead_bugs += 1
+                    success_count += 1
                     sprite_list.remove(bug[i])
                     bug[i].active_sprite = False
                     bug[i].target_collision = True
@@ -377,9 +428,27 @@ def main():
                     bug[i].wall_collision = True
                     bug[i].active_sprite = False
 
-        # End generation if all bugs are DEAD
-        if dead_bugs >= population:
-            lifespan_counter = 0
+        # End of Generation Check
+        if dead_bugs >= population or lifespan_counter <= 0:
+
+            # Convergence Check
+            # 1. Success Rate
+            if (success_count / population) >= success_threshold:
+                simulation_running = False
+                end_reason = f"Success Rate > {int(success_threshold * 100)}%"
+                continue
+
+                # 2. Fitness Plateau
+            if max_fitness > last_generation_max_fitness:
+                last_generation_max_fitness = max_fitness
+                plateau_counter = 0
+            else:
+                plateau_counter += 1
+
+            if plateau_counter >= plateau_limit:
+                simulation_running = False
+                end_reason = f"Fitness Stalled ({plateau_limit} gens)"
+                continue
 
             if progress_flag is False:
                 progress_counter += 1
@@ -405,9 +474,7 @@ def main():
             print("Mutation Rate:" + "\t"*3 + str(int(mutation_rate * 100)) + " Percent")
             print("Highest Fitness Score:" + "\t" + str(max_fitness))
 
-        # Calculate fitness scores and create new population
-        if lifespan_counter == 0:
-
+            # Reproduction Logic
             for i in range(population):
                 if bug[i].active_sprite is True:
                     sprite_list.remove(bug[i])
@@ -418,24 +485,31 @@ def main():
             mating_pool.clear()
             for i in range(population):
                 n = round(bug[i].fitness_score * 100)
-
-                j = 0
-                while j <= n:
+                # Optimization: using better looping logic of Python here
+                for _ in range(n):
                     mating_pool.append(bug[i])
-                    j += 1
 
-            # Create children
             bug.clear()
-            for i in range(population):
-                parent_a, parent_b = select_parents(mating_pool)
-                child = parent_a.crossover(parent_b.genes)
 
-                bug.append(Bug(child))
-                sprite_list.add(bug)
+            # If mating pool is empty (all died with 0 fitness), restart evolution
+            # instead of crashing on empty selection.
+            if len(mating_pool) == 0:
+                for i in range(population):
+                    bug.append(Bug(0)) # Reseed with random bugs
+            else:
+                # Normal evolution: Create children from parents
+                for i in range(population):
+                    parent_a, parent_b = select_parents(mating_pool)
+                    child = parent_a.crossover(parent_b.genes)
+                    bug.append(Bug(child))
 
+            # Add all new bugs to the sprite group at once (O(N)) instead of inside the loop (O(N^2)).
+            sprite_list.add(bug)
             lifespan_counter = lifespan * population
             generation_counter += 1
             dead_bugs = 0
+            success_count = 0
+            target_reached_flag = False
 
         u.draw_button("Quit", display_width - 100, display_height - 100, 90, 90,
                        (255, 0, 0), (230, 0, 0), quit)
