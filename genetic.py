@@ -10,7 +10,7 @@ pygame.init()
 ###############################
 # Program Parameters
 frames_per_second = 240
-total_obstacles = 1
+total_obstacles = 30
 mutation_rate = 0.01
 population = 200
 lifespan = 100
@@ -136,6 +136,8 @@ class Bug(pygame.sprite.Sprite, DNA):
         self.death_time = 0
         self.lifetime = 0
 
+        self.visited_points = []
+
         self.position = Vector(center_x, display_height - 60)
         self.velocity = Vector(0, 0)
         self.acceleration = Vector(0, 0)
@@ -154,6 +156,7 @@ class Bug(pygame.sprite.Sprite, DNA):
             self.velocity *= resistance
             self.position += self.velocity
             self.rect = pygame.Rect(self.position.x, self.position.y, 40, 40)
+            self.visited_points.append(self.rect.center)
 
 
     def update_bug_force(self):
@@ -302,6 +305,9 @@ def main():
     target_reached_flag = False
     progress_counter = 0
 
+    # Variable to store the best path from the previous generation
+    best_path_to_draw = []
+
     obstacle = []
     bug = []
     mating_pool = []
@@ -353,6 +359,10 @@ def main():
             u.sprite_update(sprite_list)
             u.sprite_update(obstacle_list)
 
+            # Also draw the winning path on the end screen
+            if len(best_path_to_draw) > 1:
+                pygame.draw.lines(game_display, red, False, best_path_to_draw, 3)
+
             # 2. Setup Fonts
             font_title = pygame.font.SysFont("arial", 60, bold=True)
             font_sub = pygame.font.SysFont("arial", 30)
@@ -381,6 +391,11 @@ def main():
             # 7. Skip the rest of the loop (physics)
             continue
             # -----------------------------------
+
+        # Draw the best path from the PREVIOUS generation
+        # This draws a red line showing the "current best known solution"
+        if len(best_path_to_draw) > 1:
+            pygame.draw.lines(game_display, red, False, best_path_to_draw, 2)
 
         # Standard Status Text
         update_status_text("Generation " + str(generation_counter), 30)
@@ -430,6 +445,19 @@ def main():
 
         # End of Generation Check
         if dead_bugs >= population or lifespan_counter <= 0:
+
+            # Capture the best path before destroying bugs
+            # Find the bug with the highest fitness in this generation
+            current_best_bug = None
+            current_max = -1
+            for b in bug:
+                if b.fitness_score > current_max:
+                    current_max = b.fitness_score
+                    current_best_bug = b
+
+            # Save its path to the list for drawing next frame
+            if current_best_bug is not None:
+                best_path_to_draw = current_best_bug.visited_points[:]
 
             # Convergence Check
             # 1. Success Rate
