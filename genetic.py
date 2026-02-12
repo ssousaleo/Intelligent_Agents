@@ -68,7 +68,17 @@ sprite_target = pygame.sprite.Group()
 
 
 class DNA:
+    """
+    Handles genetic data (movement vectors) for the agents.
+    """
+
     def __init__(self, genes):
+        """
+        Initialize DNA with specific genes or random vectors.
+
+        Args:
+            genes (list or int): List of vectors if inheritance, else 0/None for random.
+        """
         self.genes = []
 
         if genes:
@@ -79,9 +89,19 @@ class DNA:
                                          (random.randrange(-SPEED, _SPEED_MAX))))
 
     def get_genes(self, index):
+        """Returns the vector at the specified gene index."""
         return self.genes[index]
 
     def crossover(self, partner_genes):
+        """
+        Mixes genes with a partner's genes to create a new DNA sequence.
+
+        Args:
+            partner_genes (list): The gene list of the partner agent.
+
+        Returns:
+            list: The new hybrid gene list after mutation.
+        """
         new_genes = []
         midpoint = random.randrange(0, len(self.genes))
 
@@ -95,6 +115,15 @@ class DNA:
         return new_genes
 
     def mutation(self, genes):
+        """
+        Randomly alters genes based on the global mutation rate.
+
+        Args:
+            genes (list): The gene list to mutate.
+
+        Returns:
+            list: The mutated gene list.
+        """
         for i in range(LIFESPAN):
             if random.random() < MUTATION_RATE:
                 genes[i] = Vector((random.randrange(-SPEED, _SPEED_MAX)),
@@ -103,7 +132,20 @@ class DNA:
 
 
 class Obstacle(pygame.sprite.Sprite):
+    """
+    Represents a static wall or obstacle in the simulation.
+    """
+
     def __init__(self, width, height, location_x, location_y):
+        """
+        Initialize a black rectangular obstacle.
+
+        Args:
+            width (int): Width of the obstacle.
+            height (int): Height of the obstacle.
+            location_x (int): X coordinate.
+            location_y (int): Y coordinate.
+        """
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.Surface([width, height])
         self.image.fill(BLACK)
@@ -113,7 +155,12 @@ class Obstacle(pygame.sprite.Sprite):
 
 
 class Target(pygame.sprite.Sprite):
+    """
+    Represents the goal (red circle) agents try to reach.
+    """
+
     def __init__(self):
+        """Initialize the target sprite."""
         pygame.sprite.Sprite.__init__(self)
         self.image = target_surface
         self.rect = self.image.get_rect(center=target_location)
@@ -121,7 +168,17 @@ class Target(pygame.sprite.Sprite):
 
 
 class Bug(pygame.sprite.Sprite, DNA):
+    """
+    Represents an agent in the population that moves and evolves.
+    """
+
     def __init__(self, dna):
+        """
+        Initialize a bug with specific or random DNA.
+
+        Args:
+            dna (list or int): The genetic code for this bug.
+        """
         pygame.sprite.Sprite.__init__(self)
 
         if dna:
@@ -157,12 +214,19 @@ class Bug(pygame.sprite.Sprite, DNA):
         self.rotate_bug(self.angle)
 
     def apply_force(self, force):
+        """
+        Applies a vector force to the bug's acceleration.
+
+        Args:
+            force (Vector): The force vector to apply.
+        """
         self.acceleration = force
         self.velocity = self.acceleration
         self.position += self.velocity
         self.acceleration = Vector(0, 0)
 
     def draw(self):
+        """Updates the bug's visual position and records its path."""
         if self.active_sprite is True:
             self.velocity *= RESISTANCE
             self.position += self.velocity
@@ -170,6 +234,7 @@ class Bug(pygame.sprite.Sprite, DNA):
             self.visited_points.append(self.rect.center)
 
     def update_bug_force(self):
+        """Retrieves the next movement vector from DNA and applies it."""
         if self.active_sprite is True:
             if self.count < LIFESPAN:
                 force_vector = DNA.get_genes(self, self.count)
@@ -185,6 +250,12 @@ class Bug(pygame.sprite.Sprite, DNA):
             self.rotate_bug(self.angle)
 
     def rotate_bug(self, degrees):
+        """
+        Rotates the bug sprite image.
+
+        Args:
+            degrees (float): The angle to rotate to.
+        """
         self.angle = degrees
         old_center = self.image.get_rect()
         rotated_image = pygame.transform.rotate(self.original_image, degrees)
@@ -194,6 +265,7 @@ class Bug(pygame.sprite.Sprite, DNA):
         self.image = rotated_image
 
     def calculate_fitness(self):
+        """Calculates the fitness score based on distance to target, collision, and speed."""
         distance_from_target = math.hypot(self.position.x - target_location[0],
                                           self.position.y - target_location[1])
 
@@ -213,27 +285,46 @@ class Bug(pygame.sprite.Sprite, DNA):
 
 
 class Utility:
+    """
+    Helper class for Pygame events, drawing, and UI updates.
+    """
+
     def event_update(self):
+        """Processes pygame events, handling Quit."""
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.quit()
 
     def sprite_update(self, sprite_group):
+        """Draws a sprite group to the display."""
         sprite_group.draw(game_display)
 
     def display_update(self):
+        """Updates the full display and ticks the clock."""
         pygame.display.flip()
         clock.tick(FRAMES_PER_SECOND)
 
     def quit(self):
+        """Exits the application."""
         pygame.quit()
         exit()
 
     def text_objects(self, text, font):
+        """Creates a text surface and rect for rendering."""
         text_surface = font.render(text, True, BLACK)
         return text_surface, text_surface.get_rect()
 
     def draw_button(self, msg, x, y, width, height, a_color, i_color, action=None):
+        """
+        Draws an interactive button.
+
+        Args:
+            msg (str): Button text.
+            x, y, width, height (int): Dimensions and position.
+            a_color (tuple): Active color (hover).
+            i_color (tuple): Inactive color.
+            action (func): Callback function when clicked.
+        """
         mouse = pygame.mouse.get_pos()
         click = pygame.mouse.get_pressed()
 
@@ -251,28 +342,54 @@ class Utility:
 
     # NEW FUNCTION: Draws a semi-transparent background rect
     def draw_transparent_rect(self, x, y, width, height, color=UI_BG_COLOR, alpha=UI_ALPHA):
+        """
+        Draws a rectangle with alpha transparency.
+
+        Args:
+            x, y, width, height (int): Dimensions and position.
+            color (tuple): RGB color.
+            alpha (int): Transparency 0-255.
+        """
         s = pygame.Surface((width, height))
         s.set_alpha(alpha)
         s.fill(color)
         game_display.blit(s, (x, y))
 
     def reset_program(self):
+        """Resets the simulation by calling main()."""
         main()
 
 
 def update_record(count):
+    """Draws record text to screen (Legacy helper)."""
     font = pygame.font.SysFont(None, 25)
     text = font.render("Fastest bug: " + str(count), True, BLACK)
     game_display.blit(text, (30, 60))
 
 
-def update_status_text(count, position):
+def update_status_text(text_content, position):
+    """
+    Draws specific status text at a vertical Y position.
+
+    Args:
+        text_content (str): The string to display.
+        position (int): The y-coordinate.
+    """
     font = pygame.font.SysFont(None, 25)
-    text = font.render(str(count), True, BLACK)
+    text = font.render(text_content, True, BLACK)
     game_display.blit(text, (30, position))
 
 
 def select_parents(mating_pool):
+    """
+    Selects two random parents from the weighted mating pool.
+
+    Args:
+        mating_pool (list): List of Bug objects weighted by fitness.
+
+    Returns:
+        tuple: (parent_a, parent_b)
+    """
     max_index = len(mating_pool)
     if max_index > 0:
         parent_a = mating_pool[random.randrange(0, max_index)]
@@ -283,38 +400,11 @@ def select_parents(mating_pool):
         return None, None
 
 
-def main():
-    global MUTATION_RATE  # Use the global config variable
-    # Record the initial starting mutation rate
-    starting_mutation_rate = MUTATION_RATE
-
-    plateau_counter = 0
-    last_generation_max_fitness = 0
-    simulation_running = True
-    end_reason = ""
-    success_count = 0
-
-    loop = True
-    dead_bugs = 0
-    update_counter = 0
-    max_fitness = 0
-    lifespan_counter = LIFESPAN * POPULATION
-    generation_counter = 0
-    progress_flag = True
-    target_reached_flag = False
-    progress_counter = 0
-
-    best_path_to_draw = []
-    global_best_fitness = 0
-
+def setup_environment():
+    """
+    Initializes and places all static obstacles (walls) in the environment.
+    """
     obstacle = []
-    bug = []
-    mating_pool = []
-    active_bugs = []
-    wall = [0] * TOTAL_OBSTACLES
-
-    u = Utility()
-    target = Target()
 
     # Create screen bordering walls
     wall_1 = Obstacle(20, DISPLAY_HEIGHT, 0, 0)
@@ -331,78 +421,225 @@ def main():
 
     # Create random obstacles
     for i in range(TOTAL_OBSTACLES):
-        wall[i] = Obstacle(100, 20,
-                           random.randrange(0, DISPLAY_HEIGHT),
-                           random.randrange(110, DISPLAY_WIDTH - 150))
-        obstacle.append(wall[i])
+        rand_wall = Obstacle(100, 20,
+                             random.randrange(0, DISPLAY_HEIGHT),
+                             random.randrange(110, DISPLAY_WIDTH - 150))
+        obstacle.append(rand_wall)
 
     obstacle_list.add(obstacle)
-    sprite_target.add(target)
-    game_display.fill(WHITE)
 
-    # Create initial list of bug objects
+
+def create_initial_population():
+    """
+    Creates the first generation of bugs with random DNA.
+
+    Returns:
+        list: A list of Bug objects.
+    """
+    bugs = []
     for i in range(POPULATION):
-        bug.append(Bug(0))
-        sprite_list.add(bug[i])
-        active_bugs.append(True)
+        bugs.append(Bug(0))
+        sprite_list.add(bugs[i])
+    return bugs
 
+
+def draw_results_screen(u, end_reason, generation_counter, max_fitness, best_path_to_draw):
+    """
+    Renders the final summary screen when simulation ends.
+
+    Args:
+        u (Utility): Utility instance.
+        end_reason (str): Why the simulation stopped.
+        generation_counter (int): Final generation count.
+        max_fitness (float): Highest fitness achieved.
+        best_path_to_draw (list): Points of the best path.
+    """
+    u.sprite_update(sprite_target)
+    u.sprite_update(sprite_list)
+    u.sprite_update(obstacle_list)
+
+    if len(best_path_to_draw) > 1:
+        pygame.draw.lines(game_display, RED, False, best_path_to_draw, 3)
+
+    # Draw UI background for results
+    bg_w, bg_h = 400, 300
+    bg_x = center_x - (bg_w // 2)
+    bg_y = center_y - (bg_h // 2)
+    u.draw_transparent_rect(bg_x, bg_y, bg_w, bg_h, UI_BG_COLOR, 230)
+
+    font_title = pygame.font.SysFont("arial", 60, bold=True)
+    font_sub = pygame.font.SysFont("arial", 30)
+
+    title_surf = font_title.render("CONVERGED!", True, BLUE)
+    reason_surf = font_sub.render(f"Reason: {end_reason}", True, RED)
+    stats_surf = font_sub.render(f"Gen: {generation_counter} | Max Fit: {round(max_fitness, 2)}", True, BLACK)
+
+    t_rect = title_surf.get_rect(center=(center_x, center_y - 60))
+    r_rect = reason_surf.get_rect(center=(center_x, center_y))
+    s_rect = stats_surf.get_rect(center=(center_x, center_y + 40))
+
+    game_display.blit(title_surf, t_rect)
+    game_display.blit(reason_surf, r_rect)
+    game_display.blit(stats_surf, s_rect)
+
+    u.draw_button("Quit", DISPLAY_WIDTH - 100, DISPLAY_HEIGHT - 100, 90, 90, RED, (230, 0, 0), u.quit)
+
+
+def draw_hud(u, generation_counter, max_fitness, plateau_counter, success_count, best_path_to_draw):
+    """
+    Draws the heads-up display with statistics during the simulation.
+
+    Args:
+        u (Utility): Utility instance.
+        generation_counter (int): Current generation.
+        max_fitness (float): Current max fitness.
+        plateau_counter (int): Current stall counter.
+        success_count (int): Number of bugs reaching target.
+        best_path_to_draw (list): Points of the best path from previous gen.
+    """
+    # Draw best path
+    if len(best_path_to_draw) > 1:
+        pygame.draw.lines(game_display, RED, False, best_path_to_draw, 2)
+
+    # Draw UI background for stats
+    u.draw_transparent_rect(10, 10, 250, 180, UI_BG_COLOR, 180)
+
+    # Standard Status Text
+    update_status_text("Generation " + str(generation_counter), 30)
+    update_status_text("Mutation Rate: " + str(int(MUTATION_RATE * 100)) + " Percent", 60)
+    update_status_text("Fitness Score: " + str(max_fitness), 90)
+    update_status_text(f"Plateau: {plateau_counter}/{PLATEAU_LIMIT}", 120)
+    update_status_text(f"Successes: {success_count}/{POPULATION}", 150)
+
+    u.sprite_update(sprite_target)
+    u.sprite_update(sprite_list)
+    u.sprite_update(obstacle_list)
+
+
+def adjust_mutation_rate(progress_flag, target_reached_flag, progress_counter, starting_rate):
+    """
+    Adjusts the global mutation rate dynamically based on progress.
+
+    Args:
+        progress_flag (bool): Whether fitness improved this gen.
+        target_reached_flag (bool): Whether any bug hit the target.
+        progress_counter (int): Counter for stagnant generations.
+        starting_rate (float): The baseline mutation rate.
+
+    Returns:
+        tuple: (new_progress_flag, new_progress_counter)
+    """
+    global MUTATION_RATE
+
+    if progress_flag is False:
+        progress_counter += 1
+        if progress_counter == 5:
+            if target_reached_flag is True and MUTATION_RATE < 0.02:
+                MUTATION_RATE += 0.01
+                progress_counter = 0
+            elif target_reached_flag is False and MUTATION_RATE < .05:
+                MUTATION_RATE += 0.02
+                progress_counter = 0
+    elif progress_flag is True:
+        progress_flag = False
+        MUTATION_RATE = starting_rate
+        progress_counter = 0
+        print("Successful generation!")
+
+    return progress_flag, progress_counter
+
+
+def create_next_generation(bugs, max_fitness):
+    """
+    Generates the next population using selection, crossover, and mutation.
+
+    Args:
+        bugs (list): The current generation of bugs.
+        max_fitness (float): The max fitness score used for normalization.
+
+    Returns:
+        list: The new list of Bug objects.
+    """
+    # Normalize fitness scores
+    for i in range(POPULATION):
+        if bugs[i].active_sprite is True:
+            sprite_list.remove(bugs[i])
+        bugs[i].fitness_score /= max_fitness
+
+    # Create mating pool
+    mating_pool = []
+    for i in range(POPULATION):
+        n = round(bugs[i].fitness_score * 100)
+        for _ in range(n):
+            mating_pool.append(bugs[i])
+
+    bugs.clear()
+    new_bugs = []
+
+    # Crossover
+    if len(mating_pool) == 0:
+        for i in range(POPULATION):
+            new_bugs.append(Bug(0))
+    else:
+        for i in range(POPULATION):
+            parent_a, parent_b = select_parents(mating_pool)
+            child = parent_a.crossover(parent_b.genes)
+            new_bugs.append(Bug(child))
+
+    sprite_list.add(new_bugs)
+    return new_bugs
+
+
+def main():
+    """
+    The main simulation loop controlling the genetic algorithm.
+    """
+    global MUTATION_RATE  # Use the global config variable
+
+    # Initialize State
+    starting_mutation_rate = MUTATION_RATE
+    plateau_counter = 0
+    last_generation_max_fitness = 0
+    simulation_running = True
+    end_reason = ""
+    success_count = 0
+
+    dead_bugs = 0
+    update_counter = 0
+    max_fitness = 0
+    lifespan_counter = LIFESPAN * POPULATION
+    generation_counter = 0
+    progress_flag = True
+    target_reached_flag = False
+    progress_counter = 0
+
+    best_path_to_draw = []
+    global_best_fitness = 0
+
+    # Setup Logic
+    u = Utility()
+    target = Target()
+    sprite_target.add(target)
+
+    setup_environment()
+    bug = create_initial_population()
+    active_bugs = [True] * POPULATION  # Kept for consistency with original logic structure
+
+    loop = True
     while loop is True:
         game_display.fill(WHITE)
         u.event_update()
 
-        # Visual result screen
+        # Visual result screen (Simulation Ended)
         if not simulation_running:
-            u.sprite_update(sprite_target)
-            u.sprite_update(sprite_list)
-            u.sprite_update(obstacle_list)
-
-            if len(best_path_to_draw) > 1:
-                pygame.draw.lines(game_display, RED, False, best_path_to_draw, 3)
-
-            # Draw UI background for results
-            # Box centered on screen
-            bg_w, bg_h = 400, 300
-            bg_x = center_x - (bg_w // 2)
-            bg_y = center_y - (bg_h // 2)
-            u.draw_transparent_rect(bg_x, bg_y, bg_w, bg_h, UI_BG_COLOR, 230)
-
-            font_title = pygame.font.SysFont("arial", 60, bold=True)
-            font_sub = pygame.font.SysFont("arial", 30)
-
-            title_surf = font_title.render("CONVERGED!", True, BLUE)
-            reason_surf = font_sub.render(f"Reason: {end_reason}", True, RED)
-            stats_surf = font_sub.render(f"Gen: {generation_counter} | Max Fit: {round(max_fitness, 2)}", True, BLACK)
-
-            t_rect = title_surf.get_rect(center=(center_x, center_y - 60))
-            r_rect = reason_surf.get_rect(center=(center_x, center_y))
-            s_rect = stats_surf.get_rect(center=(center_x, center_y + 40))
-
-            game_display.blit(title_surf, t_rect)
-            game_display.blit(reason_surf, r_rect)
-            game_display.blit(stats_surf, s_rect)
-
-            u.draw_button("Quit", DISPLAY_WIDTH - 100, DISPLAY_HEIGHT - 100, 90, 90, RED, (230, 0, 0), u.quit)
+            draw_results_screen(u, end_reason, generation_counter, max_fitness, best_path_to_draw)
             u.display_update()
             continue
 
-        # Draw best path
-        if len(best_path_to_draw) > 1:
-            pygame.draw.lines(game_display, RED, False, best_path_to_draw, 2)
+        # Draw HUD and active simulation elements
+        draw_hud(u, generation_counter, max_fitness, plateau_counter, success_count, best_path_to_draw)
 
-        # Draw UI background for stats
-        u.draw_transparent_rect(10, 10, 250, 180, UI_BG_COLOR, 180)
-
-        # Standard Status Text
-        update_status_text("Generation " + str(generation_counter), 30)
-        update_status_text("Mutation Rate: " + str(int(MUTATION_RATE * 100)) + " Percent", 60)
-        update_status_text("Fitness Score: " + str(max_fitness), 90)
-        update_status_text(f"Plateau: {plateau_counter}/{PLATEAU_LIMIT}", 120)
-        update_status_text(f"Successes: {success_count}/{POPULATION}", 150)
-
-        u.sprite_update(sprite_target)
-        u.sprite_update(sprite_list)
-        u.sprite_update(obstacle_list)
-
+        # Physics & Logic Update Loop
         update_counter += 1
 
         for i in range(POPULATION):
@@ -410,6 +647,7 @@ def main():
 
             if update_counter >= 10:
                 for j in range(POPULATION):
+                    # Note: Logic preserved from original - update_counter reset inside loop
                     update_counter = 0
                     lifespan_counter -= 1
                     bug[j].update_bug_force()
@@ -429,7 +667,7 @@ def main():
                     bug[i].target_collision = True
                     target_reached_flag = True
 
-                if pygame.sprite.spritecollide(bug[i], obstacle, False):
+                if pygame.sprite.spritecollide(bug[i], obstacle_list, False):
                     dead_bugs += 1
                     sprite_list.remove(bug[i])
                     bug[i].wall_collision = True
@@ -447,19 +685,19 @@ def main():
                     current_gen_max = b.fitness_score
                     current_gen_best_bug = b
 
-            # Compare against the all-time global best
-            # Only update the red line if this generation produced a better result
+            # Update Global Best Path
             if current_gen_best_bug is not None:
                 if current_gen_max > global_best_fitness:
                     global_best_fitness = current_gen_max
                     best_path_to_draw = current_gen_best_bug.visited_points[:]
 
-            # Convergence Check
+            # Check: Convergence (Success Rate)
             if (success_count / POPULATION) >= SUCCESS_THRESHOLD:
                 simulation_running = False
                 end_reason = f"Success Rate > {int(SUCCESS_THRESHOLD * 100)}%"
                 continue
 
+            # Check: Convergence (Plateau)
             if max_fitness > last_generation_max_fitness:
                 last_generation_max_fitness = max_fitness
                 plateau_counter = 0
@@ -472,49 +710,20 @@ def main():
                 continue
 
             # Mutation adjustment logic
-            if progress_flag is False:
-                progress_counter += 1
-                if progress_counter == 5:
-                    if target_reached_flag is True and MUTATION_RATE < 0.02:
-                        MUTATION_RATE += 0.01
-                        progress_counter = 0
-                    elif target_reached_flag is False and MUTATION_RATE < .05:
-                        MUTATION_RATE += 0.02
-                        progress_counter = 0
-            elif progress_flag is True:
-                progress_flag = False
-                MUTATION_RATE = starting_mutation_rate
-                progress_counter = 0
-                print("Successful generation!")
+            progress_flag, progress_counter = adjust_mutation_rate(
+                progress_flag, target_reached_flag, progress_counter, starting_mutation_rate
+            )
 
+            # Print Stats
             print("\n")
             print("Generation " + str(generation_counter))
             print("Mutation Rate:" + "\t" * 3 + str(int(MUTATION_RATE * 100)) + " Percent")
             print("Highest Fitness Score:" + "\t" + str(max_fitness))
 
-            for i in range(POPULATION):
-                if bug[i].active_sprite is True:
-                    sprite_list.remove(bug[i])
-                bug[i].fitness_score /= max_fitness
+            # Create Next Generation
+            bug = create_next_generation(bug, max_fitness)
 
-            mating_pool.clear()
-            for i in range(POPULATION):
-                n = round(bug[i].fitness_score * 100)
-                for _ in range(n):
-                    mating_pool.append(bug[i])
-
-            bug.clear()
-
-            if len(mating_pool) == 0:
-                for i in range(POPULATION):
-                    bug.append(Bug(0))
-            else:
-                for i in range(POPULATION):
-                    parent_a, parent_b = select_parents(mating_pool)
-                    child = parent_a.crossover(parent_b.genes)
-                    bug.append(Bug(child))
-
-            sprite_list.add(bug)
+            # Reset Counters
             lifespan_counter = LIFESPAN * POPULATION
             generation_counter += 1
             dead_bugs = 0
