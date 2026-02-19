@@ -1,4 +1,5 @@
-# Refined Intelligent Agent Project by Zixuan(Lyson) Chen
+# Intelligent Agent
+
 ## Original Project: https://github.com/danbar0/Intelligent_Agents
 ## Original Description:
 
